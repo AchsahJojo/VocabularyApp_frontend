@@ -11,7 +11,7 @@ export default function TestLandingPage() {
     <View style={styles.container}>
       <Text style={styles.title}>🎉 Login Successful! 🎉</Text>
       <Text style={styles.subtitle}>You have been redirected to the test page.</Text>
-      <Button title="Go to HomePage" onPress={() => navigation.navigate("HomePage")} color="#3498db" />
+      <Button title="Go to HomePage" onPress={() => (navigation as any).navigate("HomePage")} color="#3498db" />
     </View>
   );
 }

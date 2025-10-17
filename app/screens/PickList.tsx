@@ -1,4 +1,3 @@
-import { useSQLiteContext } from "expo-sqlite";
 import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
@@ -6,68 +5,119 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 
-export default function PickList({ route }) {
+const API_BASE_URL = "http://localhost:8080";
+
+interface VocabList {
+  id: string;
+  userId: string;
+  listName: string;
+}
+
+interface RouteParams {
+  userID: string;
+  vocabHistoryID: string;
+  dailyWord: string;
+  definition: string;
+}
+
+interface PickListProps {
+  route: {
+    params: RouteParams;
+  };
+}
+
+interface ItemProps {
+  item: VocabList;
+  onPress: () => void;
+  backgroundColor: string;
+  textColor: string;
+}
+
+export default function PickList({ route }: PickListProps) {
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
-  const db = useSQLiteContext();
-  const [vocabLists, setVocabLists] = useState([]);
+  const [vocabLists, setVocabLists] = useState<VocabList[]>([]);
   const { userID, vocabHistoryID, dailyWord, definition } = route.params;
-  const [selectedID, setSelectedID] = useState<number | null>(null);
-
-  let isMounted = true;
+  const [selectedID, setSelectedID] = useState<string | null>(null);
 
   useEffect(() => {
-    // Added due to risk of errors
-    let isMounted = true;
+    console.log("=".repeat(50));
+    console.log("🎬 PickList screen loaded");
+    console.log("👤 userID:", userID);
+    console.log("📁 vocabHistoryID:", vocabHistoryID);
+    console.log("📝 dailyWord:", dailyWord);
+    console.log("📖 definition:", definition);
+    console.log("=".repeat(50));
 
-    if (db) {
-      const loadVocabLists = async () => {
-        try {
-          // Debugging
-          // console.log(`Fetching vocab lists for userID: ${userID} and vocabHistoryID: ${vocabHistoryID}`);
+    loadVocabLists();
+  }, []);
 
-          // gets all created lists from user except for Vocab History
-          const results = await db.getAllAsync("SELECT * FROM vocabLists WHERE userID = ? AND listID != ?", [userID, vocabHistoryID]);
-          if (isMounted) {
-            setVocabLists(results);
-          }
-        } catch (error) {
-          console.error("Error loading vocab lists:", error);
-        } finally {
-          if (isMounted) {
-            setLoading(false);
-          }
-        }
-      };
+  const loadVocabLists = async () => {
+    try {
+      console.log("🔍 Loading vocab lists...");
+      console.log(
+        "🌐 URL:",
+        `${API_BASE_URL}/api/vocab/lists/${userID}/exclude-history`
+      );
 
-      loadVocabLists();
+      const response = await fetch(
+        `${API_BASE_URL}/api/vocab/lists/${userID}/exclude-history`
+      );
+
+      console.log("📡 Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Error response:", errorText);
+        throw new Error(`Failed to fetch lists: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("✅ Received data:", JSON.stringify(data, null, 2));
+
+      setVocabLists(data.lists || []);
+      console.log("📊 Total lists loaded:", (data.lists || []).length);
+    } catch (error) {
+      console.error("=".repeat(50));
+      console.error("❌ Error loading vocab lists:", error);
+      console.error("=".repeat(50));
+      Alert.alert(
+        "Error",
+        "Failed to load vocab lists. Check console for details."
+      );
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return () => { isMounted = false; };
-  }, [db, userID]);
-
-  const Item = ({ item, onPress, backgroundColor, textColor }) => (
-    <TouchableOpacity onPress={onPress} style={[styles.item, { backgroundColor }]}>
-      <Text style={[styles.listName, { color: textColor }]}>{item.listName || item.word}</Text>
+  const Item = ({ item, onPress, backgroundColor, textColor }: ItemProps) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.item, { backgroundColor }]}
+    >
+      <Text style={[styles.listName, { color: textColor }]}>
+        {item.listName}
+      </Text>
     </TouchableOpacity>
   );
 
-
-  const renderItem = ({ item }) => {
-    const backgroundColor = item.listID === selectedID ? "#aed6f1" : "#5dade2";
-    const color = item.listID === selectedID ? "black" : "white";
+  const renderItem = ({ item }: { item: VocabList }) => {
+    const backgroundColor = item.id === selectedID ? "#aed6f1" : "#5dade2";
+    const color = item.id === selectedID ? "black" : "white";
 
     return (
       <Item
         item={item}
         onPress={() => {
-          setSelectedID(item.listID);
-          saveWordToList(item.listID);
-          navigation.goBack();
+          console.log("📌 List selected:", item.listName);
+          setSelectedID(item.id);
+          saveWordToList(item.id, item.listName);
         }}
         backgroundColor={backgroundColor}
         textColor={color}
@@ -75,123 +125,177 @@ export default function PickList({ route }) {
     );
   };
 
-  const saveWordToList = async (chosenID) => {
-    if (dailyWord && definition) {
-      try {
-        const existingWord = await db.getFirstAsync(
-          "SELECT * FROM wordInList WHERE userID = ? AND listID = ? AND word = ?",
-          [userID, chosenID, dailyWord]
-        );
+  const saveWordToList = async (chosenID: string, listName: string) => {
+    console.log("=".repeat(50));
+    console.log("💾 Saving word to list");
+    console.log("📝 Word:", dailyWord);
+    console.log("📖 Definition:", definition);
+    console.log("📁 List ID:", chosenID);
+    console.log("📋 List name:", listName);
+    console.log("👤 User ID:", userID);
 
-        const existingList = await db.getFirstAsync("SELECT * FROM vocabLists WHERE userID = ? AND listID = ?", [userID, chosenID]);
-        const chosenListName = existingList.listName;
+    try {
+      const requestBody = {
+        userId: userID,
+        listId: chosenID,
+        word: dailyWord,
+        definition: definition,
+      };
 
-        if (existingWord) {
-          console.log(`⚠️ Word '${dailyWord}' already exists in ${chosenListName}.`);
-          alert(`This word is already in ${chosenListName}!`);
-          return;
-        }
+      console.log("📦 Request body:", JSON.stringify(requestBody, null, 2));
+      console.log("🌐 URL:", `${API_BASE_URL}/api/vocab/words`);
 
-        const response = await db.runAsync(
-          "INSERT INTO wordInList (userID, listID, word, definition) VALUES (?, ?, ?, ?)",
-          [userID, chosenID, dailyWord, definition]
-        );
+      const response = await fetch(`${API_BASE_URL}/api/vocab/words`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-        if (response && response.changes > 0) { // Check if changes were made
-          console.log(`✅ Saved '${dailyWord}' to ${chosenListName}.`);
-          alert(`Word saved to ${chosenListName}!`);
-        } else {
-          console.log(`Failed to save word to ${chosenListName}.`);
-        }
-      } catch (error) {
-        console.error("🚨 Error saving word:", error);
+      console.log("📡 Response status:", response.status);
+
+      const data = await response.json();
+      console.log("📄 Response data:", JSON.stringify(data, null, 2));
+
+      if (response.ok) {
+        console.log(`✅ SUCCESS! Saved '${dailyWord}' to ${listName}`);
+        Alert.alert("Success", `Word saved to ${listName}!`, [
+          {
+            text: "OK",
+            onPress: () => {
+              console.log("🔙 Navigating back");
+              navigation.goBack();
+            },
+          },
+        ]);
+      } else {
+        console.error(`❌ Failed to save: ${data.error}`);
+        Alert.alert("Error", data.error || "Failed to save word");
       }
+    } catch (error) {
+      console.error("=".repeat(50));
+      console.error("🚨 Error saving word:", error);
+      console.error("=".repeat(50));
+      Alert.alert("Error", "Could not connect to server");
     }
   };
 
   return (
     <SafeAreaProvider>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            console.log("🔙 Back button pressed");
+            navigation.goBack();
+          }}
+        >
           <Text style={styles.backButtonText}>&#8249;- Back</Text>
         </TouchableOpacity>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Select List to Add "{dailyWord}"</Text>
         </View>
-        {/* Added for center alignment */}
         <View style={styles.rightContent} />
       </View>
 
       <SafeAreaView style={styles.container}>
-        {/* Vocab Lists Section */}
         {loading ? (
-          <Text>Loading Vocab Lists...</Text>
+          <View style={{ marginTop: 20 }}>
+            <ActivityIndicator size="large" color="#5dade2" />
+            <Text style={{ textAlign: "center", marginTop: 10 }}>
+              Loading lists...
+            </Text>
+          </View>
         ) : vocabLists.length === 0 ? (
-          <Text style={styles.noListsText}>No Created Vocab Lists Found</Text>
+          <View style={{ marginTop: 20, padding: 20 }}>
+            <Text style={styles.noListsText}>No Created Vocab Lists Found</Text>
+            <Text style={{ textAlign: "center", marginTop: 10, color: "#666" }}>
+              Create a list first to add words to it
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.item,
+                { backgroundColor: "#4CAF50", marginTop: 20 },
+              ]}
+              onPress={() => {
+                console.log("➕ Create list button pressed");
+                (navigation as any).navigate("ListCreation", { userID });
+              }}
+            >
+              <Text style={[styles.listName, { color: "white" }]}>
+                + Create New List
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : (
-          <FlatList
-            data={vocabLists}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.listID.toString()}
-          />
+          <>
+            <Text style={{ marginVertical: 10, color: "#666" }}>
+              Tap a list to save "{dailyWord}"
+            </Text>
+            <FlatList
+              data={vocabLists}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+            />
+          </>
         )}
       </SafeAreaView>
     </SafeAreaProvider>
   );
-};
+}
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
     backgroundColor: "white",
-    borderBottomColor: '#ddd',
-    justifyContent: 'space-between',
+    borderBottomColor: "#ddd",
+    justifyContent: "space-between",
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
     color: "blue",
+    fontSize: 16,
   },
   titleContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
+    paddingHorizontal: 10,
   },
   title: {
     textAlign: "center",
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: "bold",
   },
   rightContent: {
     width: 50,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   container: {
     flex: 1,
     paddingHorizontal: 16,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-    textAlign: "center",
-  },
   noListsText: {
     textAlign: "center",
     color: "#888",
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: "bold",
   },
   item: {
     padding: 20,
     marginVertical: 8,
     marginHorizontal: 5,
+    borderRadius: 8,
   },
   listName: {
-    fontSize: 25,
+    fontSize: 20,
     fontWeight: "bold",
+    textAlign: "center",
   },
 });
