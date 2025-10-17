@@ -15,23 +15,23 @@ export default function CreateAccount() {
         Alert.alert("Error", "All fields are required.");
         return;
       }
-  
+
       // Call backend API instead of SQLite
-      const response = await fetch('http://localhost:8080/api/auth/register', {
-        method: 'POST',
+      const response = await fetch("http://localhost:8080/api/auth/register", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email: email,
           password: password,
           securityQuestion: securityQuestion,
-          securityAnswer: securityAnswer
+          securityAnswer: securityAnswer,
         }),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         Alert.alert("Sign Up Successful", "You can now log in.");
         (navigation as any).navigate("LoginPage");
@@ -39,17 +39,38 @@ export default function CreateAccount() {
         Alert.alert("Sign Up Failed", data.error || "An error occurred");
       }
     } catch (error) {
-      Alert.alert("Sign Up Failed", "Could not connect to server: " + error.message);
+      // Alert.alert("Sign Up Failed", "Could not connect to server: " + error.message);
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
-      <TextInput style={styles.input} placeholder="User Name" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
-      <TextInput style={styles.input} placeholder="Security Question" value={securityQuestion} onChangeText={setSecurityQuestion} />
-      <TextInput style={styles.input} placeholder="Answer to Security Question" value={securityAnswer} onChangeText={setSecurityAnswer} />
+      <TextInput
+        style={styles.input}
+        placeholder="User Name"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Security Question"
+        value={securityQuestion}
+        onChangeText={setSecurityQuestion}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Answer to Security Question"
+        value={securityAnswer}
+        onChangeText={setSecurityAnswer}
+      />
       <Button title="Sign Up" onPress={handleSignUp} color="#FF5733" />
     </View>
   );
@@ -78,4 +99,3 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 });
-

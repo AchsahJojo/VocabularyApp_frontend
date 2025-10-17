@@ -11,7 +11,7 @@ import {
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = "http://localhost:8080";
 
 interface RouteParams {
   userID: string;
@@ -34,7 +34,7 @@ export default function ListCreation({ route }: ListCreationProps) {
       Alert.alert("Error", "Please enter a list name.");
       return;
     }
-  
+
     setLoading(true);
     console.log("=".repeat(60));
     console.log("🔍 CREATING LIST");
@@ -42,29 +42,29 @@ export default function ListCreation({ route }: ListCreationProps) {
     console.log("👤 userID type:", typeof userID);
     console.log("📝 listName:", listName.trim());
     console.log("🌐 API URL:", `${API_BASE_URL}/api/vocab/lists`);
-  
+
     try {
       const requestBody = {
         userId: userID,
-        listName: listName.trim()
+        listName: listName.trim(),
       };
-  
+
       console.log("📦 Request body:", JSON.stringify(requestBody, null, 2));
-  
+
       const response = await fetch(`${API_BASE_URL}/api/vocab/lists`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
       });
-  
+
       console.log("📡 Response status:", response.status);
       console.log("📡 Response ok:", response.ok);
-  
+
       const responseText = await response.text();
       console.log("📄 Raw response:", responseText);
-  
+
       let data;
       try {
         data = JSON.parse(responseText);
@@ -74,13 +74,13 @@ export default function ListCreation({ route }: ListCreationProps) {
         Alert.alert("Error", "Invalid response from server");
         return;
       }
-  
+
       if (!response.ok) {
         console.error("❌ Error response:", data);
         Alert.alert("Error", data.error || "Failed to create list");
         return;
       }
-  
+
       console.log("✅ SUCCESS! List created:", data);
       Alert.alert("Success", "List created successfully!", [
         {
@@ -88,20 +88,23 @@ export default function ListCreation({ route }: ListCreationProps) {
           onPress: () => {
             console.log("🔙 Navigating back to LandingPage");
             (navigation as any).navigate("LandingPage", { userID });
-          }
-        }
+          },
+        },
       ]);
-  
     } catch (error) {
       console.error("=".repeat(60));
       console.error("❌ EXCEPTION CAUGHT");
       console.error("❌ Error type:", error?.constructor?.name);
-      console.error("❌ Error message:", error?.message);
+      // console.error("❌ Error message:", error?.message);
       console.error("❌ Full error:", error);
       console.error("=".repeat(60));
-      
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-      Alert.alert("Connection Error", "Could not connect to server: " + errorMessage);
+
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred";
+      Alert.alert(
+        "Connection Error",
+        "Could not connect to server: " + errorMessage
+      );
     } finally {
       setLoading(false);
       console.log("=".repeat(60));
@@ -111,9 +114,11 @@ export default function ListCreation({ route }: ListCreationProps) {
   return (
     <SafeAreaProvider>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => (navigation as any).navigate("LandingPage", { userID })}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() =>
+            (navigation as any).navigate("LandingPage", { userID })
+          }
         >
           <Text style={styles.backButtonText}>&#8249;- Back</Text>
         </TouchableOpacity>
@@ -134,16 +139,20 @@ export default function ListCreation({ route }: ListCreationProps) {
             autoFocus
           />
         </View>
-        
+
         {loading ? (
           <View style={{ marginTop: 20 }}>
             <ActivityIndicator size="large" color="#0000ff" />
-            <Text style={{ textAlign: 'center', marginTop: 10 }}>Creating list...</Text>
+            <Text style={{ textAlign: "center", marginTop: 10 }}>
+              Creating list...
+            </Text>
           </View>
         ) : (
           <View style={{ flexDirection: "row", gap: 20, marginTop: 20 }}>
             <TouchableOpacity
-              onPress={() => (navigation as any).navigate("LandingPage", { userID })}
+              onPress={() =>
+                (navigation as any).navigate("LandingPage", { userID })
+              }
               style={[styles.button, { backgroundColor: "red" }]}
             >
               <Text style={styles.buttonText}>Cancel</Text>
@@ -163,14 +172,14 @@ export default function ListCreation({ route }: ListCreationProps) {
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
     backgroundColor: "white",
-    borderBottomColor: '#ddd',
-    justifyContent: 'space-between',
+    borderBottomColor: "#ddd",
+    justifyContent: "space-between",
   },
   backButton: {
     padding: 8,
@@ -181,15 +190,15 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   rightContent: {
     width: 50,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   container: {
     flex: 1,
