@@ -37,6 +37,7 @@ interface WordListPageProps {
 const WordListPage = ({ route }: WordListPageProps) => {
   const [loading, setLoading] = useState(true);
   const [wordList, setWordList] = useState<WordInList[]>([]);
+  const [deleting, setDeleting] = useState(false);
   const navigation = useNavigation();
   const { userID, listID, listName } = route.params;
   const [headerListName, setHeaderListName] = useState<string | null>(
@@ -90,6 +91,66 @@ const WordListPage = ({ route }: WordListPageProps) => {
     }
   };
 
+  const confirmDelete = () => {
+    Alert.alert(
+      "Delete this list and all words?",
+      "This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: deleteList },
+      ]
+    );
+  };
+
+  const deleteList = async () => {
+    setDeleting(true);
+    try {
+      const url = `${API_BASE_URL}/api/vocab/lists/${userID}/${listID}`;
+      console.log("🗑️ Deleting list URL:", url);
+
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("🗑️ Delete response status:", response.status);
+
+      if (response.status === 200 || response.status === 204) {
+        Alert.alert("Success", "List deleted successfully.", [
+          {
+            text: "OK",
+            onPress: () => {
+              (navigation as any).navigate("VocabListPage", { userID });
+            },
+          },
+        ]);
+      } else if (response.status === 404) {
+        Alert.alert("List not found", "This list could not be found.", [
+          {
+            text: "OK",
+            onPress: () => {
+              (navigation as any).navigate("VocabListPage", { userID });
+            },
+          },
+        ]);
+      } else if (response.status === 403) {
+        Alert.alert("Unauthorized", "You are not authorized to delete this list.");
+      } else if (response.status === 500) {
+        Alert.alert("Server error", "Server error — try again.");
+      } else {
+        const text = await response.text();
+        Alert.alert("Error", text || `Unexpected response: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("🧨 Error deleting list:", error);
+      Alert.alert("Error", "Could not delete list. Check your connection and try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <SafeAreaProvider>
       <View style={styles.header}>
@@ -105,9 +166,22 @@ const WordListPage = ({ route }: WordListPageProps) => {
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{headerListName || "Vocab List"}</Text>
         </View>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadWordList}>
-          <Text style={styles.refreshButtonText}>🔄</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.refreshButton} onPress={loadWordList}>
+            <Text style={styles.refreshButtonText}>🔄</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.deleteButton, deleting ? { opacity: 0.6 } : {}]}
+            onPress={confirmDelete}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color="#c0392b" />
+            ) : (
+              <Text style={styles.deleteButtonText}>Delete</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <SafeAreaView style={styles.container}>
@@ -186,6 +260,23 @@ const styles = StyleSheet.create({
   },
   refreshButtonText: {
     fontSize: 20,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  deleteButton: {
+    marginLeft: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: "#ffe6e6",
+    borderWidth: 1,
+    borderColor: "#f5c6c6",
+  },
+  deleteButtonText: {
+    color: "#c0392b",
+    fontWeight: "700",
   },
   container: {
     flex: 1,

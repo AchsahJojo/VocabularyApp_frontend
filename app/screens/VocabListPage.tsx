@@ -51,6 +51,10 @@ const VocabListPage = ({ route }: VocabListPageProps) => {
     console.log("👤 userID:", userID);
     console.log("📚 vocabHistoryID:", vocabHistoryID);
     loadVocabLists();
+
+    // Refresh lists whenever this screen is focused (e.g., after deleting a list)
+    const unsubscribe = (navigation as any).addListener("focus", loadVocabLists);
+    return unsubscribe;
   }, [userID]);
 
   const loadVocabLists = async () => {
