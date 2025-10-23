@@ -4,7 +4,7 @@ import wordList from "../../assets/advanced_words.json";
 import { useNavigation } from "@react-navigation/native";
 import { useSQLiteContext } from "expo-sqlite";
 import { Asset } from "expo-asset";
-
+// hello
 const LandingScreen = ({ route }) => {
   const [dailyWord, setDailyWord] = useState<string | null>(null);
   const [definition, setDefinition] = useState<string | null>(null);
